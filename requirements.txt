@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+torch
+torchvision
+pillow
+python-multipart
+aiofiles
+requests
+scikit-learn
+opencv-python-headless
+numpy

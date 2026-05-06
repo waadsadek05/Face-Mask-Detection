@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Face Mask Detector</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── DARK THEME (default) ── */
+  :root {
+    --bg:           #0a0a0f;
+    --surface:      #13131a;
+    --surface2:     #1a1a24;
+    --border:       rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.18);
+    --teal:         #00d4aa;
+    --teal-dim:     rgba(0,212,170,0.12);
+    --teal-glow:    rgba(0,212,170,0.25);
+    --rose:         #ff4d7e;
+    --rose-dim:     rgba(255,77,126,0.15);
+    --text:         #f0eff8;
+    --muted:        rgba(240,239,248,0.45);
+    --grid-line:    rgba(0,212,170,0.04);
+    --orb1:         rgba(0,212,170,0.10);
+    --orb2:         rgba(255,77,126,0.07);
+    --shadow:       0 2px 24px rgba(0,0,0,0.35);
+    --mono:    'DM Mono', monospace;
+    --display: 'DM Serif Display', serif;
+    --body:    'Outfit', sans-serif;
+  }
+
+  /* ── LIGHT THEME ── */
+  [data-theme="light"] {
+    --bg:           #f4f3f8;
+    --surface:      #ffffff;
+    --surface2:     #f0eff8;
+    --border:       rgba(0,0,0,0.09);
+    --border-hover: rgba(0,0,0,0.2);
+    --teal:         #00a688;
+    --teal-dim:     rgba(0,166,136,0.10);
+    --teal-glow:    rgba(0,166,136,0.20);
+    --rose:         #e03060;
+    --rose-dim:     rgba(224,48,96,0.10);
+    --text:         #14131f;
+    --muted:        rgba(20,19,31,0.50);
+    --grid-line:    rgba(0,166,136,0.06);
+    --orb1:         rgba(0,166,136,0.12);
+    --orb2:         rgba(224,48,96,0.07);
+    --shadow:       0 2px 24px rgba(0,0,0,0.10);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 20px 80px;
+    position: relative;
+    overflow-x: hidden;
+    transition: background 0.35s, color 0.35s;
+  }
+
+  /* ── BACKGROUND ── */
+  .grid-bg {
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    transition: background-image 0.35s;
+  }
+  .orb {
+    position: fixed; border-radius: 50%;
+    filter: blur(80px); pointer-events: none;
+    transition: background 0.35s;
+  }
+  .orb-1 { width:400px; height:400px; top:-100px; right:-80px; background: var(--orb1); }
+  .orb-2 { width:300px; height:300px; bottom:0;   left:-60px;  background: var(--orb2); }
+
+  /* ── THEME TOGGLE ── */
+  .theme-toggle {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 100;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    transition: border-color 0.2s, color 0.2s, background 0.35s, transform 0.2s;
+    box-shadow: var(--shadow);
+  }
+  .theme-toggle:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+    transform: rotate(18deg);
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative; z-index: 1;
+    animation: slideDown 0.7s cubic-bezier(.22,1,.36,1) both;
+  }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--teal);
+    border: 1px solid rgba(0,212,170,0.3);
+    padding: 5px 14px; border-radius: 2px; margin-bottom: 20px;
+    transition: border-color 0.35s, color 0.35s;
+  }
+  [data-theme="light"] .tag { border-color: rgba(0,166,136,0.3); }
+  .tag-dot { width:5px; height:5px; border-radius:50%; background:var(--teal); animation: blink 2s ease infinite; }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(2.6rem,7vw,4.2rem);
+    font-weight: 400; line-height: 1.05; letter-spacing: -1px;
+    color: var(--text); transition: color 0.35s;
+  }
+  h1 em { color: var(--teal); font-style: normal; }
+  .sub {
+    font-size: 12px; color: var(--muted); letter-spacing: 2.5px;
+    text-transform: uppercase; margin-top: 12px;
+    font-family: var(--mono); transition: color 0.35s;
+  }
+
+  /* ── CARD ── */
+  .card {
+    width: 100%; max-width: 580px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden;
+    position: relative; z-index: 1;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.7s 0.1s cubic-bezier(.22,1,.36,1) both;
+    transition: background 0.35s, border-color 0.35s, box-shadow 0.35s;
+  }
+  .card-top-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--teal), transparent);
+    opacity: 0.6;
+    transition: background 0.35s;
+  }
+  .card-inner { padding: 28px; }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 24px;
+  }
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted);
+    transition: color 0.35s;
+  }
+  .pulse-dot {
+    width:7px; height:7px; border-radius:50%;
+    background: var(--muted); transition: background 0.4s;
+  }
+  .pulse-dot.on  { background: var(--teal); animation: pulse 2.5s ease infinite; }
+  .pulse-dot.off { background: var(--rose); }
+  .endpoint-badge {
+    font-family: var(--mono); font-size: 9px; color: var(--teal);
+    opacity: 0.6; letter-spacing: 1px;
+    border: 1px solid var(--border); padding: 3px 8px; border-radius: 2px;
+    transition: color 0.35s, border-color 0.35s;
+  }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 3px; min-height: 200px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px; cursor: pointer; position: relative;
+    transition: border-color 0.25s, background 0.25s;
+    padding: 36px 20px;
+  }
+  .drop-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .drop-zone:hover, .drop-zone.over {
+    border-color: var(--teal);
+    background: var(--teal-dim);
+  }
+  .drop-icon-wrap {
+    width:64px; height:64px;
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.25s, transform 0.25s;
+    background: var(--surface2);
+  }
+  .drop-zone:hover .drop-icon-wrap, .drop-zone.over .drop-icon-wrap {
+    border-color: var(--teal);
+    transform: translateY(-4px);
+  }
+  .drop-icon-wrap i { font-size:26px; color: var(--teal); }
+  .drop-label {
+    font-size: 12px; color: var(--muted); letter-spacing: 0.5px;
+    text-align: center; line-height: 1.7;
+    transition: color 0.35s;
+  }
+  .drop-label strong { color: var(--teal); font-weight: 500; }
+  .formats { display:flex; gap:8px; margin-top:4px; }
+  .fmt {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+    color: var(--muted); border: 1px solid var(--border);
+    padding: 2px 7px; border-radius: 2px;
+    transition: color 0.35s, border-color 0.35s;
+  }
+
+  /* ── PREVIEW ── */
+  .preview-section {
+    display: none; flex-direction: column; align-items: center;
+    gap: 14px; padding: 16px 0 8px;
+    animation: fadeIn 0.4s ease both;
+  }
+  .img-frame {
+    position: relative;
+    border: 1px solid var(--border-hover);
+    border-radius: 2px; overflow: hidden; max-width: 100%;
+    transition: border-color 0.35s;
+  }
+  .img-frame img { max-height:260px; max-width:100%; display:block; object-fit:contain; }
+  .img-corner {
+    position:absolute; width:14px; height:14px;
+    border-color: var(--teal); border-style: solid; opacity: 0.7;
+  }
+  .img-corner.tl { top:4px; left:4px;   border-width: 2px 0 0 2px; }
+  .img-corner.tr { top:4px; right:4px;  border-width: 2px 2px 0 0; }
+  .img-corner.bl { bottom:4px; left:4px;  border-width: 0 0 2px 2px; }
+  .img-corner.br { bottom:4px; right:4px; border-width: 0 2px 2px 0; }
+  .img-meta {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--muted); letter-spacing: 1px;
+    transition: color 0.35s;
+  }
+
+  /* ── DIVIDER ── */
+  .divider { height:1px; background: var(--border); margin: 20px 0; transition: background 0.35s; }
+
+  /* ── ANALYZE BUTTON ── */
+  .analyze-btn {
+    width: 100%; padding: 15px;
+    background: var(--teal); color: #0a0a0f;
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    letter-spacing: 3px; text-transform: uppercase;
+    border: none; cursor: pointer; border-radius: 2px;
+    transition: opacity 0.2s, transform 0.1s, background 0.35s;
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; margin-top: 20px;
+  }
+  .analyze-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .analyze-btn:not(:disabled):hover { opacity: 0.88; }
+  .analyze-btn:not(:disabled):active { transform: scale(0.98); }
+
+  .spinner {
+    width:13px; height:13px;
+    border: 2px solid rgba(10,10,15,0.3);
+    border-top-color: #0a0a0f;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  /* ── RESULT BOX ── */
+  .result-box {
+    display: none; margin-top: 22px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px; overflow: hidden;
+    animation: fadeIn 0.45s cubic-bezier(.22,1,.36,1) both;
+    transition: background 0.35s, border-color 0.35s;
+  }
+  .result-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    transition: border-color 0.35s;
+  }
+  .verdict {
+    font-family: var(--display);
+    font-size: 2.2rem; font-weight: 400;
+    letter-spacing: -0.5px; line-height: 1;
+    transition: color 0.35s;
+  }
+  .verdict.allow { color: var(--teal); }
+  .verdict.deny  { color: var(--rose); }
+  .verdict-sub {
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-top: 6px; opacity: 0.5; color: var(--text);
+    transition: color 0.35s;
+  }
+  .result-body { padding: 16px 20px 18px; }
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid rgba(128,128,128,0.1);
+    font-size: 12.5px; transition: border-color 0.35s;
+  }
+  .stat-row:last-of-type { border-bottom: none; }
+  .stat-key {
+    color: var(--muted); font-family: var(--mono);
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    transition: color 0.35s;
+  }
+  .stat-val { font-weight: 500; transition: color 0.35s; }
+  .stat-val.allow { color: var(--teal); }
+  .stat-val.deny  { color: var(--rose); }
+
+  /* face detected badge */
+  .face-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 2px;
+    border: 1px solid; margin-top: 12px;
+  }
+  .face-badge.found   { color: var(--teal); border-color: var(--teal); background: var(--teal-dim); }
+  .face-badge.notfound { color: var(--muted); border-color: var(--border); background: transparent; }
+
+  /* confidence bar */
+  .conf-section { margin-top: 14px; }
+  .conf-head {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+    transition: color 0.35s;
+  }
+  .conf-track {
+    height: 3px; background: var(--border);
+    border-radius: 2px; overflow: hidden;
+    transition: background 0.35s;
+  }
+  .conf-fill { height: 100%; width: 0%; transition: width 0.8s cubic-bezier(.22,1,.36,1); border-radius: 2px; }
+  .conf-fill.allow { background: var(--teal); }
+  .conf-fill.deny  { background: var(--rose); }
+
+  .result-accent { height: 2px; }
+  .result-accent.allow { background: linear-gradient(90deg, transparent, var(--teal), transparent); }
+  .result-accent.deny  { background: linear-gradient(90deg, transparent, var(--rose), transparent); }
+
+  /* ── ERROR ── */
+  .error-msg {
+    display: none; margin-top: 14px;
+    padding: 11px 14px;
+    border: 1px solid rgba(255,77,126,0.25);
+    background: var(--rose-dim);
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--rose); letter-spacing: 0.5px;
+    border-radius: 2px; animation: fadeIn 0.3s ease both;
+    transition: background 0.35s;
+  }
+
+  /* ── RESET BUTTON ── */
+  .reset-btn {
+    display: none; width: 100%; margin-top: 12px; padding: 11px;
+    background: transparent;
+    border: 1px solid var(--border); color: var(--muted);
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; border-radius: 2px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .reset-btn:hover { border-color: var(--border-hover); color: var(--text); }
+
+  /* ── FOOTER ── */
+  .footer {
+    margin-top: 32px; font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 1.5px; color: var(--muted); opacity: 0.4;
+    text-align: center; z-index: 1; position: relative;
+    animation: fadeIn 1.2s ease both;
+    transition: color 0.35s;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes slideDown { from { opacity:0; transform:translateY(-24px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes slideUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn    { from { opacity:0; } to { opacity:1; } }
+  @keyframes spin      { to { transform: rotate(360deg); } }
+  @keyframes blink     { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  @keyframes pulse     { 0%,100% { box-shadow: 0 0 0 0 rgba(0,212,170,0.5); } 70% { box-shadow: 0 0 0 6px rgba(0,212,170,0); } }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- Theme Toggle -->
+<button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode">
+  <i class="ti ti-moon" id="theme-icon"></i>
+</button>
+
+<header>
+  <div class="tag"><span class="tag-dot"></span>ML Inference</div>
+  <h1>Face <em>Mask</em><br>Detector</h1>
+  <p class="sub">MobileNetV2 · FastAPI · Real‑time</p>
+</header>
+
+<div class="card">
+  <div class="card-top-line"></div>
+  <div class="card-inner">
+
+    <div class="status-bar">
+      <div class="status-pill">
+        <div class="pulse-dot" id="dot"></div>
+        <span id="status-text">Checking API…</span>
+      </div>
+      <div class="endpoint-badge">POST /predict</div>
+    </div>
+
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*" />
+      <div class="drop-icon-wrap">
+        <i class="ti ti-upload"></i>
+      </div>
+      <div class="drop-label">
+        <strong>Click or drag</strong> your image here<br>
+        <div class="formats">
+          <span class="fmt">JPG</span>
+          <span class="fmt">PNG</span>
+          <span class="fmt">WEBP</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-section" id="preview-section">
+      <div class="img-frame">
+        <img id="preview-img" alt="preview" />
+        <div class="img-corner tl"></div>
+        <div class="img-corner tr"></div>
+        <div class="img-corner bl"></div>
+        <div class="img-corner br"></div>
+      </div>
+      <div class="img-meta" id="img-meta"></div>
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <button class="analyze-btn" id="analyze-btn" disabled>
+      <i class="ti ti-scan"></i>
+      Analyze Image
+    </button>
+
+    <div class="result-box" id="result-box">
+      <div class="result-accent" id="result-accent"></div>
+      <div class="result-header">
+        <div class="verdict" id="verdict"></div>
+        <div class="verdict-sub" id="verdict-sub"></div>
+      </div>
+      <div class="result-body">
+        <div class="stat-row">
+          <span class="stat-key">Status</span>
+          <span class="stat-val" id="r-status"></span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Action</span>
+          <span class="stat-val" id="r-action"></span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Confidence</span>
+          <span class="stat-val" id="r-conf"></span>
+        </div>
+        <div id="face-badge-wrap"></div>
+        <div class="conf-section">
+          <div class="conf-head">
+            <span>Confidence score</span>
+            <span id="conf-pct"></span>
+          </div>
+          <div class="conf-track">
+            <div class="conf-fill" id="conf-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="reset-btn" id="reset-btn">
+      <i class="ti ti-refresh"></i> &nbsp; Analyze another image
+    </button>
+
+  </div>
+</div>
+
+<div class="footer">FACE MASK DETECTION · MOBILENETV2 · v2.0</div>
+
+<script>
+  // ── API URL (same origin — served by FastAPI) ──────────────
+  const API = 'http://localhost:8000';
+
+  // ── THEME TOGGLE ──────────────────────────────────────────
+  const html       = document.documentElement;
+  const themeBtn   = document.getElementById('theme-toggle');
+  const themeIcon  = document.getElementById('theme-icon');
+
+  const saved = localStorage.getItem('theme') || 'dark';
+  setTheme(saved);
+
+  themeBtn.addEventListener('click', () => {
+    setTheme(html.dataset.theme === 'dark' ? 'light' : 'dark');
+  });
+
+  function setTheme(t) {
+    html.dataset.theme = t;
+    localStorage.setItem('theme', t);
+    themeIcon.className = t === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+    themeBtn.title = t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  }
+
+  // ── REFS ──────────────────────────────────────────────────
+  const dropZone       = document.getElementById('drop-zone');
+  const fileInput      = document.getElementById('file-input');
+  const previewSection = document.getElementById('preview-section');
+  const previewImg     = document.getElementById('preview-img');
+  const imgMeta        = document.getElementById('img-meta');
+  const analyzeBtn     = document.getElementById('analyze-btn');
+  const resultBox      = document.getElementById('result-box');
+  const errorMsg       = document.getElementById('error-msg');
+  const resetBtn       = document.getElementById('reset-btn');
+  const dot            = document.getElementById('dot');
+  const statusText     = document.getElementById('status-text');
+  const resultAccent   = document.getElementById('result-accent');
+  const faceBadgeWrap  = document.getElementById('face-badge-wrap');
+
+  let selectedFile = null;
+
+  // ── API HEALTH CHECK ──────────────────────────────────────
+  async function checkAPI() {
+    try {
+      const r = await fetch(`${API}/`, { signal: AbortSignal.timeout(3000), mode: 'cors' });
+      if (r.ok) {
+        dot.className = 'pulse-dot on';
+        statusText.textContent = 'API ONLINE';
+      } else throw new Error();
+    } catch {
+      dot.className = 'pulse-dot off';
+      statusText.textContent = 'API OFFLINE — run uvicorn first';
+    }
+  }
+  checkAPI();
+  setInterval(checkAPI, 10000);
+
+  // ── DRAG & DROP ───────────────────────────────────────────
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('over');
+    const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) { showError('Please upload an image file (JPG, PNG, WEBP).'); return; }
+    selectedFile = file;
+    previewImg.src = URL.createObjectURL(file);
+    imgMeta.textContent = `${file.name}  ·  ${(file.size / 1024).toFixed(1)} KB`;
+    previewSection.style.display = 'flex';
+    dropZone.style.display = 'none';
+    analyzeBtn.disabled = false;
+    hideError();
+    resultBox.style.display = 'none';
+    resetBtn.style.display = 'none';
+  }
+
+  // ── PREDICT ───────────────────────────────────────────────
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<div class="spinner"></div> Analyzing…';
+    hideError();
+    resultBox.style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    try {
+      const r = await fetch(`${API}/predict`, { method: 'POST', body: fd });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e.detail || `Server error ${r.status}`);
+      }
+      const data = await r.json();
+      showResult(data);
+    } catch (e) {
+      showError('Error: ' + (e.message || 'Could not reach the API.'));
+      analyzeBtn.disabled = false;
+      analyzeBtn.innerHTML = '<i class="ti ti-scan"></i> Analyze Image';
+    }
+  });
+
+  // ── SHOW RESULT ───────────────────────────────────────────
+  function showResult(data) {
+    const isAllow = data.action === 'Allow entry';
+    const cls = isAllow ? 'allow' : 'deny';
+    const pct = Math.round(data.confidence * 100);
+
+    document.getElementById('verdict').textContent     = isAllow ? '✓ Mask On' : '✗ No Mask';
+    document.getElementById('verdict').className       = `verdict ${cls}`;
+    document.getElementById('verdict-sub').textContent = isAllow
+      ? 'Entry permitted — mask detected'
+      : 'Entry denied — no mask detected';
+
+    document.getElementById('r-status').textContent = data.status;
+    document.getElementById('r-status').className   = `stat-val ${cls}`;
+    document.getElementById('r-action').textContent = data.action;
+    document.getElementById('r-action').className   = `stat-val ${cls}`;
+    document.getElementById('r-conf').textContent   = data.confidence.toFixed(2);
+
+    // face detected badge
+    if (data.face_detected !== undefined) {
+      faceBadgeWrap.innerHTML = data.face_detected
+        ? `<div class="face-badge found"><i class="ti ti-focus-2"></i> Face detected — cropped for analysis</div>`
+        : `<div class="face-badge notfound"><i class="ti ti-alert-triangle"></i> No face detected — full image used</div>`;
+    }
+
+    document.getElementById('conf-pct').textContent = pct + '%';
+    const fill = document.getElementById('conf-fill');
+    fill.className = `conf-fill ${cls}`;
+    fill.style.width = '0%';
+
+    resultAccent.className = `result-accent ${cls}`;
+    resultBox.style.display = 'block';
+    resetBtn.style.display = 'block';
+
+    setTimeout(() => { fill.style.width = pct + '%'; }, 80);
+
+    analyzeBtn.innerHTML = '<i class="ti ti-scan"></i> Analyze Image';
+    analyzeBtn.disabled = false;
+  }
+
+  // ── RESET ─────────────────────────────────────────────────
+  resetBtn.addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    previewSection.style.display = 'none';
+    dropZone.style.display = 'flex';
+    resultBox.style.display = 'none';
+    resetBtn.style.display = 'none';
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<i class="ti ti-scan"></i> Analyze Image';
+    faceBadgeWrap.innerHTML = '';
+    hideError();
+  });
+
+  function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+  function hideError()    { errorMsg.style.display = 'none'; }
+</script>
+</body>
+</html>

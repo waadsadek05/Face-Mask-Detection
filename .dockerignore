@@ -1,0 +1,8 @@
+data/
+notebooks/
+*.ipynb
+__pycache__/
+*.pyc
+.git
+.gitignore
+venv/
